@@ -1,0 +1,321 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TS = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
+
+if LocalPlayer.PlayerGui:FindFirstChild("MuscleKillGUI") then
+    LocalPlayer.PlayerGui["MuscleKillGUI"]:Destroy()
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MuscleKillGUI"
+screenGui.ResetOnSpawn = false
+screenGui.AutoLocalize = false
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 275, 0, 130) 
+frame.Position = UDim2.new(0, 25, 0, 35) 
+frame.BackgroundColor3 = Color3.fromRGB(45, 15, 85) 
+frame.BorderSizePixel = 3
+frame.BorderColor3 = Color3.fromRGB(140, 60, 230)
+frame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 45)
+title.BackgroundTransparency = 1
+title.AutoLocalize = false
+title.Text = "Muscle kill"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Position = UDim2.new(0, 15, 0, 5)
+title.Parent = frame
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, -30, 0, 25)
+subtitle.Position = UDim2.new(0, 15, 0, 50)
+subtitle.BackgroundTransparency = 1
+subtitle.AutoLocalize = false
+subtitle.Text = "Kills:"
+subtitle.TextColor3 = Color3.fromRGB(220, 180, 255)
+subtitle.TextScaled = true
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextXAlignment = Enum.TextXAlignment.Center
+subtitle.Parent = frame
+
+local killsLabel = Instance.new("TextLabel")
+killsLabel.Size = UDim2.new(1, -30, 0, 40)
+killsLabel.Position = UDim2.new(0, 15, 0, 75)
+killsLabel.BackgroundTransparency = 1
+killsLabel.AutoLocalize = false
+killsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+killsLabel.TextScaled = true
+killsLabel.Font = Enum.Font.GothamBold
+killsLabel.TextXAlignment = Enum.TextXAlignment.Center
+killsLabel.Text = "0 (0K)"
+killsLabel.Parent = frame
+
+local function formatNumber(v)
+    return tostring(v):reverse():gsub("%d%d%d", "%1,"):reverse():gsub("^,", "")
+end
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+        if leaderstats and leaderstats:FindFirstChild("Kills") then
+            local k = leaderstats.Kills.Value
+            local formattedExact = formatNumber(k)
+            local formattedK = string.format("%.1f", k / 1000)
+            killsLabel.Text = formattedExact .. " (" .. formattedK .. "K)"
+        end
+    end
+end)
+
+local function getCharacter() return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() end
+local function getRoot() return getCharacter():WaitForChild("HumanoidRootPart") end
+
+local function applySize2()
+    task.spawn(function()
+        while true do
+            task.wait(0.5)
+            local character = LocalPlayer.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            
+            if humanoid then
+                for _, value in ipairs(humanoid:GetChildren()) do
+                    if value:IsA("NumberValue") and value.Name:find("Scale") then
+                        value.Value = 2
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function teleportToKing()
+    local root = getRoot()
+    local targetPart = nil
+    
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name:lower():find("king") or obj.Name:lower():find("statue")) then
+            targetPart = obj
+            break
+        end
+    end
+
+    if not targetPart then
+        local kingModel = workspace:FindFirstChild("Muscle King") or workspace:FindFirstChild("King")
+        if kingModel then
+            targetPart = kingModel:FindFirstChildWhichIsA("BasePart", true) or kingModel.PrimaryPart
+        end
+    end
+
+    if targetPart then
+        local targetCFrame = targetPart.CFrame + Vector3.new(0, targetPart.Size.Y / 2 + 4, 0)
+        root.Velocity = Vector3.zero
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.CFrame = targetCFrame
+        
+        local bp = root:FindFirstChild("MaTeUsLock") or Instance.new("BodyPosition")
+        bp.Name = "MaTeUsLock"
+        bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bp.Position = targetCFrame.Position
+        bp.Parent = root
+    end
+end
+
+local blockedAnimations = {
+    ["rbxassetid://3638729053"] = true,
+    ["rbxassetid://3638767427"] = true,
+}
+
+local function setupAnimationBlocking()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("Humanoid") then return end
+
+    local humanoid = char:FindFirstChild("Humanoid")
+
+    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+        if track.Animation then
+            local animId = track.Animation.AnimationId
+            local animName = track.Name:lower()
+
+            if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
+                track:Stop()
+            end
+        end
+    end
+
+    if not _G.AnimBlockConnection then
+        local connection = humanoid.AnimationPlayed:Connect(function(track)
+            if track.Animation then
+                local animId = track.Animation.AnimationId
+                local animName = track.Name:lower()
+
+                if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
+                    track:Stop()
+                end
+            end
+        end)
+        _G.AnimBlockConnection = connection
+    end
+end
+
+local function overrideToolActivation()
+    local function processTool(tool)
+        if tool and (tool.Name == "Punch" or tool.Name:match("Attack") or tool.Name:match("Right")) then
+            if not tool:GetAttribute("ActivatedOverride") then
+                tool:SetAttribute("ActivatedOverride", true)
+
+                local connection = tool.Activated:Connect(function()
+                    task.wait(0.05)
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("Humanoid") then
+                        for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
+                            if track.Animation then
+                                local animId = track.Animation.AnimationId
+                                local animName = track.Name:lower()
+
+                                if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
+                                    track:Stop()
+                                end
+                            end
+                        end
+                    end
+                end)
+
+                if not _G.ToolConnections then _G.ToolConnections = {} end
+                _G.ToolConnections[tool] = connection
+            end
+        end
+    end
+    
+    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
+        processTool(tool)
+    end
+
+    local char = LocalPlayer.Character
+    if char then
+        for _, tool in pairs(char:GetChildren()) do
+            if tool:IsA("Tool") then
+                processTool(tool)
+            end
+        end
+    end
+
+    if not _G.BackpackAddedConnection then
+        _G.BackpackAddedConnection = LocalPlayer.Backpack.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") then
+                task.wait(0.1)
+                processTool(child)
+            end
+        end)
+    end
+
+    if not _G.CharacterToolAddedConnection and char then
+        _G.CharacterToolAddedConnection = char.ChildAdded:Connect(function(child)
+            if child:IsA("Tool") then
+                task.wait(0.1)
+                processTool(child)
+            end
+        end)
+    end
+end
+
+if _G.AnimMonitorConnection then _G.AnimMonitorConnection:Disconnect() _G.AnimMonitorConnection = nil end
+_G.AnimMonitorConnection = RunService.Heartbeat:Connect(function()
+    if tick() % 0.5 < 0.01 then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
+                if track.Animation then
+                    local animId = track.Animation.AnimationId
+                    local animName = track.Name:lower()
+
+                    if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
+                        track:Stop()
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        local character = LocalPlayer.Character
+        local rightHand = character and character:FindFirstChild("RightHand")
+        local leftHand = character and character:FindFirstChild("LeftHand")
+
+        if rightHand and leftHand then
+            for _, target in ipairs(Players:GetPlayers()) do
+                if target ~= LocalPlayer and target.Character then
+                    local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+                    local humanoid = target.Character:FindFirstChild("Humanoid")
+                    
+                    if targetRoot and humanoid and humanoid.Health > 0 then
+                        pcall(function()
+                            firetouchinterest(rightHand, targetRoot, 1)
+                            firetouchinterest(leftHand, targetRoot, 1)
+                            firetouchinterest(rightHand, targetRoot, 0)
+                            firetouchinterest(leftHand, targetRoot, 0)
+                        end)
+                    end
+                end
+            end
+        end
+        task.wait(0.02)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.02)
+        local char = getCharacter()
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
+            pcall(function() tool:Activate() end)
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        local char = getCharacter()
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if humanoid and backpack then
+            for _, tool in ipairs(backpack:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
+                    humanoid:EquipTool(tool)
+                    break
+                end
+            end
+        end
+    end
+end)
+
+local function initCharacter()
+    task.wait(1)
+    applySize2()
+    teleportToKing()
+    setupAnimationBlocking()
+    overrideToolActivation()
+end
+
+task.spawn(initCharacter)
+LocalPlayer.CharacterAdded:Connect(function()
+    _G.AnimBlockConnection = nil 
+    initCharacter()
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(30)
+        TS:Teleport(game.PlaceId)
+    end
+end)
