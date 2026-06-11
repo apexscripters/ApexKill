@@ -3,12 +3,12 @@ local LocalPlayer = Players.LocalPlayer
 local TS = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 
-if LocalPlayer.PlayerGui:FindFirstChild("MuscleKillGUI") then
-    LocalPlayer.PlayerGui["MuscleKillGUI"]:Destroy()
+if LocalPlayer.PlayerGui:FindFirstChild("ApexKillGUI") then
+    LocalPlayer.PlayerGui["ApexKillGUI"]:Destroy()
 end
 
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MuscleKillGUI"
+screenGui.Name = "ApexKillGUI"
 screenGui.ResetOnSpawn = false
 screenGui.AutoLocalize = false
 screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -25,7 +25,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundTransparency = 1
 title.AutoLocalize = false
-title.Text = "Muscle kill"
+title.Text = "Apex kill"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
