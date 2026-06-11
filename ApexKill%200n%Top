@@ -245,28 +245,36 @@ task.spawn(function()
                     local humanoid = target.Character:FindFirstChild("Humanoid")
                     
                     if targetRoot and humanoid and humanoid.Health > 0 then
+                        -- Força o registro de colisão múltiplas vezes (Velocidade de Hit 50x)
                         pcall(function()
-                            firetouchinterest(rightHand, targetRoot, 1)
-                            firetouchinterest(leftHand, targetRoot, 1)
-                            firetouchinterest(rightHand, targetRoot, 0)
-                            firetouchinterest(leftHand, targetRoot, 0)
+                            for i = 1, 50 do
+                                firetouchinterest(rightHand, targetRoot, 1)
+                                firetouchinterest(leftHand, targetRoot, 1)
+                                firetouchinterest(rightHand, targetRoot, 0)
+                                firetouchinterest(leftHand, targetRoot, 0)
+                            end
                         end)
                     end
                 end
             end
         end
-        task.wait(0.02)
+        task.wait(0.01) -- Reduzido delay para maximizar os socos por segundo
     end
 end)
 
 task.spawn(function()
     while true do
-        task.wait(0.02)
         local char = getCharacter()
         local tool = char:FindFirstChildOfClass("Tool")
         if tool and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
-            pcall(function() tool:Activate() end)
+            -- Ativa a ferramenta 50 vezes simultaneamente para quebrar o cooldown nativo
+            pcall(function()
+                for i = 1, 50 do
+                    tool:Activate()
+                end
+            end)
         end
+        task.wait(0.01)
     end
 end)
 
