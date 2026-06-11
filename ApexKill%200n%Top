@@ -3,6 +3,10 @@ local LocalPlayer = Players.LocalPlayer
 local TS = game:GetService("TeleportService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local Settings = settings()
 
 if LocalPlayer.PlayerGui:FindFirstChild("ApexKillGUI") then
     LocalPlayer.PlayerGui["ApexKillGUI"]:Destroy()
@@ -98,34 +102,17 @@ end
 
 local function teleportToKing()
     local root = getRoot()
-    local targetPart = nil
+    local targetCFrame = CFrame.new(-8750, 121, -5859)
     
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and (obj.Name:lower():find("king") or obj.Name:lower():find("statue")) then
-            targetPart = obj
-            break
-        end
-    end
-
-    if not targetPart then
-        local kingModel = workspace:FindFirstChild("Muscle King") or workspace:FindFirstChild("King")
-        if kingModel then
-            targetPart = kingModel:FindFirstChildWhichIsA("BasePart", true) or kingModel.PrimaryPart
-        end
-    end
-
-    if targetPart then
-        local targetCFrame = targetPart.CFrame + Vector3.new(0, targetPart.Size.Y / 2 + 4, 0)
-        root.Velocity = Vector3.zero
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.CFrame = targetCFrame
-        
-        local bp = root:FindFirstChild("MaTeUsLock") or Instance.new("BodyPosition")
-        bp.Name = "MaTeUsLock"
-        bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bp.Position = targetCFrame.Position
-        bp.Parent = root
-    end
+    root.Velocity = Vector3.zero
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.CFrame = targetCFrame
+    
+    local bp = root:FindFirstChild("MaTeUsLock") or Instance.new("BodyPosition")
+    bp.Name = "MaTeUsLock"
+    bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bp.Position = targetCFrame.Position
+    bp.Parent = root
 end
 
 local blockedAnimations = {
@@ -300,6 +287,83 @@ task.spawn(function()
     end
 end)
 
+local function removeScreenPopups()
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
+    if playerGui then
+        for _, gui in pairs(playerGui:GetDescendants()) do
+            if gui:IsA("TextLabel") or gui:IsA("ImageLabel") or gui:IsA("Frame") then
+                local nameLower = gui.Name:lower()
+                local textLower = gui:IsA("TextLabel") and gui.Text:lower() or ""
+                
+                if not gui:IsDescendantOf(frame) and gui.Name ~= "ApexKillGUI" then
+                    if nameLower:find("push") or nameLower:find("gain") or nameLower:find("popup") or nameLower:find("clone") or 
+                       nameLower:find("notification") or textLower:find("durabilidade") or textLower:find("durability") or 
+                       textLower:find("+") or textLower:find("kill") or textLower:find("ganhou") then
+                        
+                        gui.Visible = false
+                        if gui:IsA("TextLabel") then gui.TextTransparency = 1 end
+                        if gui:IsA("ImageLabel") then gui.ImageTransparency = 1 end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function cleanPart(v)
+    if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("UnionOperation") then
+        v.Material = Enum.Material.Plastic
+        v.Reflectance = 0
+        v.CastShadow = false
+    elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+        v.Enabled = false
+    elseif v:IsA("Decal") or v:IsA("Texture") then
+        v.Transparency = 1
+    end
+end
+
+local function optimizePerformance()
+    Settings.Rendering.QualityLevel = Enum.QualityLevel.Level01
+    Lighting.GlobalShadows = false
+    Lighting.Brightness = 0.5
+    Lighting.ClockTime = 5.5
+    Lighting.FogEnd = 1000
+    Lighting.FogStart = 300
+    Lighting.FogColor = Color3.fromRGB(20, 20, 30)
+    Lighting.Ambient = Color3.fromRGB(40, 40, 60)
+    Lighting.OutdoorAmbient = Color3.fromRGB(30, 30, 50)
+    Lighting.EnvironmentDiffuseScale = 0
+    Lighting.EnvironmentSpecularScale = 0
+
+    if Lighting:FindFirstChild("Sky") then
+        Lighting.Sky:Destroy()
+    end
+
+    for _, v in pairs(Workspace:GetDescendants()) do
+        cleanPart(v)
+    end
+
+    Workspace.DescendantAdded:Connect(cleanPart)
+end
+
+RunService.Heartbeat:Connect(function()
+    removeScreenPopups()
+    Lighting.GlobalShadows = false
+    Settings.Rendering.QualityLevel = Enum.QualityLevel.Level01
+end)
+
+local toggled = true
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.F then
+        toggled = not toggled
+        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if playerGui and playerGui:FindFirstChild("Chat") then
+            playerGui.Chat.Frame.Visible = toggled
+        end
+    end
+end)
+
 local function initCharacter()
     task.wait(1)
     applySize2()
@@ -313,6 +377,8 @@ LocalPlayer.CharacterAdded:Connect(function()
     _G.AnimBlockConnection = nil 
     initCharacter()
 end)
+
+task.spawn(optimizePerformance)
 
 local function ExecuteRealServerHop()
     local nextCursor = ""
@@ -376,7 +442,7 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(30)
+        task.wait(45)
         ExecuteRealServerHop()
     end
 end)
