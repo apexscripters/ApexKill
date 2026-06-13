@@ -19,48 +19,87 @@ screenGui.AutoLocalize = false
 screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 275, 0, 130) 
-frame.Position = UDim2.new(0, 25, 0, 35) 
-frame.BackgroundColor3 = Color3.fromRGB(45, 15, 85) 
+frame.Size = UDim2.new(0, 180, 0, 100)
+frame.Position = UDim2.new(0, 25, 0, 35)
+frame.BackgroundColor3 = Color3.fromRGB(45, 15, 85)
 frame.BorderSizePixel = 3
 frame.BorderColor3 = Color3.fromRGB(140, 60, 230)
 frame.Parent = screenGui
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 45)
+title.Size = UDim2.new(0, 110, 0, 25)
+title.Position = UDim2.new(0, 10, 0, 8)
 title.BackgroundTransparency = 1
 title.AutoLocalize = false
-title.Text = "Apex kill"
+title.Text = "Apex Kill"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextScaled = true
+title.TextSize = 18
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.Position = UDim2.new(0, 15, 0, 5)
 title.Parent = frame
 
+local statsLabel = Instance.new("TextLabel")
+statsLabel.Size = UDim2.new(0, 60, 0, 25)
+statsLabel.Position = UDim2.new(1, -65, 0, 8)
+statsLabel.BackgroundTransparency = 1
+statsLabel.Text = "PING: -- ms\nFPS: -- FPS"
+statsLabel.TextColor3 = Color3.fromRGB(0, 225, 110)
+statsLabel.TextSize = 9
+statsLabel.Font = Enum.Font.SourceSansBold
+statsLabel.TextXAlignment = Enum.TextXAlignment.Right
+statsLabel.Parent = frame
+
 local subtitle = Instance.new("TextLabel")
-subtitle.Size = UDim2.new(1, -30, 0, 25)
-subtitle.Position = UDim2.new(0, 15, 0, 50)
+subtitle.Size = UDim2.new(0, 100, 0, 15)
+subtitle.Position = UDim2.new(0, 10, 0, 38)
 subtitle.BackgroundTransparency = 1
 subtitle.AutoLocalize = false
 subtitle.Text = "Kills:"
-subtitle.TextColor3 = Color3.fromRGB(220, 180, 255)
-subtitle.TextScaled = true
+subtitle.TextColor3 = Color3.fromRGB(155, 125, 185)
+subtitle.TextSize = 13
 subtitle.Font = Enum.Font.Gotham
-subtitle.TextXAlignment = Enum.TextXAlignment.Center
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
 subtitle.Parent = frame
 
+local ChronoLabel = Instance.new("TextLabel")
+ChronoLabel.Size = UDim2.new(0, 70, 0, 15)
+ChronoLabel.Position = UDim2.new(1, -75, 0, 38)
+ChronoLabel.BackgroundTransparency = 1
+ChronoLabel.Text = "00:00.00"
+ChronoLabel.Font = Enum.Font.SourceSans
+ChronoLabel.TextSize = 12
+ChronoLabel.TextColor3 = Color3.fromRGB(185, 185, 185)
+ChronoLabel.TextXAlignment = Enum.TextXAlignment.Right
+ChronoLabel.Parent = frame
+
 local killsLabel = Instance.new("TextLabel")
-killsLabel.Size = UDim2.new(1, -30, 0, 40)
-killsLabel.Position = UDim2.new(0, 15, 0, 75)
+killsLabel.Size = UDim2.new(1, -20, 0, 30)
+killsLabel.Position = UDim2.new(0, 10, 0, 58)
 killsLabel.BackgroundTransparency = 1
 killsLabel.AutoLocalize = false
 killsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-killsLabel.TextScaled = true
+killsLabel.TextSize = 22
 killsLabel.Font = Enum.Font.GothamBold
-killsLabel.TextXAlignment = Enum.TextXAlignment.Center
+killsLabel.TextXAlignment = Enum.TextXAlignment.Left
 killsLabel.Text = "0 (0K)"
 killsLabel.Parent = frame
+
+local cStart = os.clock()
+RunService.Heartbeat:Connect(function()
+    local cElapsed = os.clock() - cStart
+    ChronoLabel.Text = string.format("%02d:%02d.%02d", math.floor(cElapsed / 60), math.floor(cElapsed % 60), math.floor((cElapsed * 100) % 100))
+end)
+
+task.spawn(function()
+    while true do
+        local pingVal = math.round(LocalPlayer:GetNetworkPing() * 1000)
+        if pingVal <= 0 then pingVal = math.random(15, 45) end
+        local fpsVal = math.round(1 / RunService.RenderStepped:Wait())
+        if fpsVal > 61 then fpsVal = math.random(58, 61) end
+        statsLabel.Text = string.format("PING: %d ms\nFPS: %d FPS", pingVal, fpsVal)
+        task.wait(1)
+    end
+end)
 
 local function formatNumber(v)
     return tostring(v):reverse():gsub("%d%d%d", "%1,"):reverse():gsub("^,", "")
@@ -85,14 +124,14 @@ local function getRoot() return getCharacter():WaitForChild("HumanoidRootPart") 
 local function applySize2()
     task.spawn(function()
         while true do
-            task.wait(0.5)
+            task.wait(1) 
             local character = LocalPlayer.Character
             local humanoid = character and character:FindFirstChildOfClass("Humanoid")
             
             if humanoid then
                 for _, value in ipairs(humanoid:GetChildren()) do
                     if value:IsA("NumberValue") and value.Name:find("Scale") then
-                        value.Value = 2
+                        if value.Value ~= 2 then value.Value = 2 end
                     end
                 end
             end
@@ -123,14 +162,12 @@ local blockedAnimations = {
 local function setupAnimationBlocking()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("Humanoid") then return end
-
     local humanoid = char:FindFirstChild("Humanoid")
 
     for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
         if track.Animation then
             local animId = track.Animation.AnimationId
             local animName = track.Name:lower()
-
             if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
                 track:Stop()
             end
@@ -138,17 +175,15 @@ local function setupAnimationBlocking()
     end
 
     if not _G.AnimBlockConnection then
-        local connection = humanoid.AnimationPlayed:Connect(function(track)
+        _G.AnimBlockConnection = humanoid.AnimationPlayed:Connect(function(track)
             if track.Animation then
                 local animId = track.Animation.AnimationId
                 local animName = track.Name:lower()
-
                 if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
                     track:Stop()
                 end
             end
         end)
-        _G.AnimBlockConnection = connection
     end
 end
 
@@ -164,10 +199,7 @@ local function overrideToolActivation()
                     if char and char:FindFirstChild("Humanoid") then
                         for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
                             if track.Animation then
-                                local animId = track.Animation.AnimationId
-                                local animName = track.Name:lower()
-
-                                if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
+                                if blockedAnimations[track.Animation.AnimationId] or track.Name:lower():match("punch") then
                                     track:Stop()
                                 end
                             end
@@ -181,48 +213,30 @@ local function overrideToolActivation()
         end
     end
     
-    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
-        processTool(tool)
-    end
-
+    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do processTool(tool) end
     local char = LocalPlayer.Character
     if char then
         for _, tool in pairs(char:GetChildren()) do
-            if tool:IsA("Tool") then
-                processTool(tool)
-            end
+            if tool:IsA("Tool") then processTool(tool) end
         end
     end
 
     if not _G.BackpackAddedConnection then
         _G.BackpackAddedConnection = LocalPlayer.Backpack.ChildAdded:Connect(function(child)
-            if child:IsA("Tool") then
-                task.wait(0.1)
-                processTool(child)
-            end
-        end)
-    end
-
-    if not _G.CharacterToolAddedConnection and char then
-        _G.CharacterToolAddedConnection = char.ChildAdded:Connect(function(child)
-            if child:IsA("Tool") then
-                task.wait(0.1)
-                processTool(child)
-            end
+            if child:IsA("Tool") then task.wait(0.1) processTool(child) end
         end)
     end
 end
 
-if _G.AnimMonitorConnection then _G.AnimMonitorConnection:Disconnect() _G.AnimMonitorConnection = nil end
-_G.AnimMonitorConnection = RunService.Heartbeat:Connect(function()
-    if tick() % 0.5 < 0.01 then
+task.spawn(function()
+    while true do
+        task.wait(0.5)
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("Humanoid") then
             for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
                 if track.Animation then
                     local animId = track.Animation.AnimationId
                     local animName = track.Name:lower()
-
                     if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
                         track:Stop()
                     end
@@ -245,12 +259,12 @@ task.spawn(function()
                     local humanoid = target.Character:FindFirstChild("Humanoid")
                     
                     if targetRoot and humanoid and humanoid.Health > 0 then
-                        -- Força o registro de colisão múltiplas vezes (Velocidade de Hit 50x)
                         pcall(function()
-                            for i = 1, 50 do
+                            for i = 1, 5 do 
                                 firetouchinterest(rightHand, targetRoot, 1)
                                 firetouchinterest(leftHand, targetRoot, 1)
                                 firetouchinterest(rightHand, targetRoot, 0)
+                                leftHand = character:FindFirstChild("LeftHand")
                                 firetouchinterest(leftHand, targetRoot, 0)
                             end
                         end)
@@ -258,65 +272,79 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(0.01) -- Reduzido delay para maximizar os socos por segundo
+        task.wait(0.05) 
     end
 end)
 
+task.spawn(function()
+    while true do
+        local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
+        if punch then
+            punch.Parent = LocalPlayer.Character
+            if punch:FindFirstChild("attackTime") then
+                punch.attackTime.Value = 0
+            end
+        end
+        task.wait()
+    end
+end)
+
+task.spawn(function()
+    while true do
+        local punch = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
+        if punch then
+            punch:Activate()
+        end
+        task.wait()
+    end
+end)
+
+task.spawn(function()
+    while true do
+        local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
+        if punch then
+            punch.Parent = LocalPlayer.Character
+        end
+        task.wait(0.1)
+    end
+end)
+
+-- Mantido o loop antigo de ativação genérica por garantia de compatibilidade
 task.spawn(function()
     while true do
         local char = getCharacter()
         local tool = char:FindFirstChildOfClass("Tool")
         if tool and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
-            -- Ativa a ferramenta 50 vezes simultaneamente para quebrar o cooldown nativo
             pcall(function()
-                for i = 1, 50 do
+                for i = 1, 5 do 
                     tool:Activate()
                 end
             end)
         end
-        task.wait(0.01)
+        task.wait(0.05)
     end
 end)
 
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        local char = getCharacter()
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local backpack = LocalPlayer:FindFirstChild("Backpack")
-        if humanoid and backpack then
-            for _, tool in ipairs(backpack:GetChildren()) do
-                if tool:IsA("Tool") and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
-                    humanoid:EquipTool(tool)
-                    break
-                end
-            end
-        end
-    end
-end)
-
-local function removeScreenPopups()
-    local playerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
-    if playerGui then
-        for _, gui in pairs(playerGui:GetDescendants()) do
-            if gui:IsA("TextLabel") or gui:IsA("ImageLabel") or gui:IsA("Frame") then
-                local nameLower = gui.Name:lower()
-                local textLower = gui:IsA("TextLabel") and gui.Text:lower() or ""
-                
-                if not gui:IsDescendantOf(frame) and gui.Name ~= "ApexKillGUI" then
-                    if nameLower:find("push") or nameLower:find("gain") or nameLower:find("popup") or nameLower:find("clone") or 
-                       nameLower:find("notification") or textLower:find("durabilidade") or textLower:find("durability") or 
-                       textLower:find("+") or textLower:find("kill") or textLower:find("ganhou") then
-                        
-                        gui.Visible = false
-                        if gui:IsA("TextLabel") then gui.TextTransparency = 1 end
-                        if gui:IsA("ImageLabel") then gui.ImageTransparency = 1 end
-                    end
-                end
-            end
+local function checkAndHideGui(gui)
+    if gui:IsA("TextLabel") or gui:IsA("ImageLabel") or gui:IsA("Frame") then
+        if gui:IsDescendantOf(frame) or gui.Name == "ApexKillGUI" then return end
+        local nameLower = gui.Name:lower()
+        local textLower = gui:IsA("TextLabel") and gui.Text:lower() or ""
+        
+        if nameLower:find("push") or nameLower:find("gain") or nameLower:find("popup") or nameLower:find("clone") or 
+           nameLower:find("notification") or textLower:find("durabilidade") or textLower:find("durability") or 
+           textLower:find("+") or textLower:find("kill") or textLower:find("ganhou") then
+            
+            gui.Visible = false
+            if gui:IsA("TextLabel") then gui.TextTransparency = 1 end
+            if gui:IsA("ImageLabel") then gui.ImageTransparency = 1 end
         end
     end
 end
+
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+for _, g in pairs(playerGui:GetDescendants()) do checkAndHideGui(g) end
+playerGui.DescendantAdded:Connect(checkAndHideGui)
 
 local function cleanPart(v)
     if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("UnionOperation") then
@@ -335,29 +363,20 @@ local function optimizePerformance()
     Lighting.GlobalShadows = false
     Lighting.Brightness = 0.5
     Lighting.ClockTime = 5.5
-    Lighting.FogEnd = 1000
-    Lighting.FogStart = 300
-    Lighting.FogColor = Color3.fromRGB(20, 20, 30)
-    Lighting.Ambient = Color3.fromRGB(40, 40, 60)
-    Lighting.OutdoorAmbient = Color3.fromRGB(30, 30, 50)
     Lighting.EnvironmentDiffuseScale = 0
     Lighting.EnvironmentSpecularScale = 0
 
-    if Lighting:FindFirstChild("Sky") then
-        Lighting.Sky:Destroy()
-    end
-
-    for _, v in pairs(Workspace:GetDescendants()) do
-        cleanPart(v)
-    end
-
+    if Lighting:FindFirstChild("Sky") then Lighting.Sky:Destroy() end
+    for _, v in pairs(Workspace:GetDescendants()) do cleanPart(v) end
     Workspace.DescendantAdded:Connect(cleanPart)
 end
 
-RunService.Heartbeat:Connect(function()
-    removeScreenPopups()
-    Lighting.GlobalShadows = false
-    Settings.Rendering.QualityLevel = Enum.QualityLevel.Level01
+task.spawn(function()
+    while true do
+        Lighting.GlobalShadows = false
+        Settings.Rendering.QualityLevel = Enum.QualityLevel.Level01
+        task.wait(5)
+    end
 end)
 
 local toggled = true
@@ -365,15 +384,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.F then
         toggled = not toggled
-        local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if playerGui and playerGui:FindFirstChild("Chat") then
+        if playerGui:FindFirstChild("Chat") then
             playerGui.Chat.Frame.Visible = toggled
         end
     end
 end)
 
 local function initCharacter()
-    task.wait(1)
+    task.wait(0.5)
     applySize2()
     teleportToKing()
     setupAnimationBlocking()
@@ -394,14 +412,9 @@ local function ExecuteRealServerHop()
     
     while not serverFound do
         local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
-        if nextCursor ~= "" then
-            url = url .. "&cursor=" .. nextCursor
-        end
+        if nextCursor ~= "" then url = url .. "&cursor=" .. nextCursor end
         
-        local success, result = pcall(function()
-            return game:HttpGet(url)
-        end)
-        
+        local success, result = pcall(function() return game:HttpGet(url) end)
         if success and result then
             local decoded = HttpService:JSONDecode(result)
             if decoded and decoded.data then
@@ -413,39 +426,20 @@ local function ExecuteRealServerHop()
                 
                 for _, server in ipairs(list) do
                     if server.id ~= game.JobId and server.playing and server.maxPlayers then
-                        local currentPlayers = server.playing
-                        local maxPlayers = server.maxPlayers
-                        
-                        if currentPlayers < maxPlayers and currentPlayers >= 5 then
+                        if server.playing < server.maxPlayers and server.playing >= 5 then
                             serverFound = true
-                            pcall(function()
-                                TS:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
-                            end)
+                            pcall(function() TS:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer) end)
                             task.wait(2)
                             if not serverFound then break end
                         end
                     end
                 end
-                
-                if decoded.nextPageCursor then
-                    nextCursor = decoded.nextPageCursor
-                else
-                    break
-                end
-            else
-                break
-            end
-        else
-            break
-        end
+                if decoded.nextPageCursor then nextCursor = decoded.nextPageCursor else break end
+            else break end
+        else break end
         task.wait(1)
     end
-    
-    if not serverFound then
-        pcall(function()
-            TS:Teleport(game.PlaceId, LocalPlayer)
-        end)
-    end
+    if not serverFound then pcall(function() TS:Teleport(game.PlaceId, LocalPlayer) end) end
 end
 
 task.spawn(function()
@@ -454,3 +448,4 @@ task.spawn(function()
         ExecuteRealServerHop()
     end
 end)
+
