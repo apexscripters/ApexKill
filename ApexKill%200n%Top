@@ -309,7 +309,6 @@ task.spawn(function()
     end
 end)
 
--- Mantido o loop antigo de ativação genérica por garantia de compatibilidade
 task.spawn(function()
     while true do
         local char = getCharacter()
@@ -448,4 +447,3 @@ task.spawn(function()
         ExecuteRealServerHop()
     end
 end)
-
