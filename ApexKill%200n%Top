@@ -227,13 +227,11 @@ local function overrideToolActivation()
     end)
 end
 
--- Loop Unificado e Persistente: AUTO KILL e AUTO EQUIP/PUNCH (Imune ao Reset)
 task.spawn(function()
     while true do
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
             
-            -- 1. Anti-Animação de Soco (Atualizado por loop)
             for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
                 if track.Animation then
                     local animId = track.Animation.AnimationId
@@ -244,7 +242,6 @@ task.spawn(function()
                 end
             end
 
-            -- 2. Sistema do Auto Equip e Auto Punch
             local punchInBackpack = LocalPlayer.Backpack:FindFirstChild("Punch")
             local punchInCharacter = char:FindFirstChild("Punch")
             
@@ -262,7 +259,6 @@ task.spawn(function()
                 punchInCharacter:Activate()
             end
             
-            -- Outras ferramentas de ataque secundárias
             local tool = char:FindFirstChildOfClass("Tool")
             if tool and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
                 pcall(function()
@@ -272,7 +268,6 @@ task.spawn(function()
                 end)
             end
 
-            -- 3. Sistema de Auto Kill (Hitbox Firetouchinterest)
             local rightHand = char:FindFirstChild("RightHand")
             local leftHand = char:FindFirstChild("LeftHand")
 
@@ -296,11 +291,10 @@ task.spawn(function()
                 end
             end
         end
-        task.wait(0.02) -- Velocidade otimizada para estabilidade e hit registration
+        task.wait(0.02)
     end
 end)
 
--- Tamanho mantido via loop independente e seguro
 task.spawn(function()
     while true do
         applySize2()
@@ -373,7 +367,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Função disparada sempre que o personagem nasce
 local function initCharacter()
     task.wait(0.2)
     teleportToKing()
