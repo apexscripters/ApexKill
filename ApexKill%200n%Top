@@ -118,29 +118,30 @@ task.spawn(function()
     end
 end)
 
-local function getCharacter() return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() end
-local function getRoot() return getCharacter():WaitForChild("HumanoidRootPart") end
+local function getCharacter() 
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() 
+end
+
+local function getRoot() 
+    local char = getCharacter()
+    return char:WaitForChild("HumanoidRootPart", 5) 
+end
 
 local function applySize2()
-    task.spawn(function()
-        while true do
-            task.wait(1) 
-            local character = LocalPlayer.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            
-            if humanoid then
-                for _, value in ipairs(humanoid:GetChildren()) do
-                    if value:IsA("NumberValue") and value.Name:find("Scale") then
-                        if value.Value ~= 2 then value.Value = 2 end
-                    end
-                end
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        for _, value in ipairs(humanoid:GetChildren()) do
+            if value:IsA("NumberValue") and value.Name:find("Scale") then
+                if value.Value ~= 2 then value.Value = 2 end
             end
         end
-    end)
+    end
 end
 
 local function teleportToKing()
     local root = getRoot()
+    if not root then return end
     local targetCFrame = CFrame.new(-8750, 121, -5859)
     
     root.Velocity = Vector3.zero
@@ -174,17 +175,16 @@ local function setupAnimationBlocking()
         end
     end
 
-    if not _G.AnimBlockConnection then
-        _G.AnimBlockConnection = humanoid.AnimationPlayed:Connect(function(track)
-            if track.Animation then
-                local animId = track.Animation.AnimationId
-                local animName = track.Name:lower()
-                if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
-                    track:Stop()
-                end
+    if _G.AnimBlockConnection then _G.AnimBlockConnection:Disconnect() end
+    _G.AnimBlockConnection = humanoid.AnimationPlayed:Connect(function(track)
+        if track.Animation then
+            local animId = track.Animation.AnimationId
+            local animName = track.Name:lower()
+            if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
+                track:Stop()
             end
-        end)
-    end
+        end
+    end)
 end
 
 local function overrideToolActivation()
@@ -221,18 +221,19 @@ local function overrideToolActivation()
         end
     end
 
-    if not _G.BackpackAddedConnection then
-        _G.BackpackAddedConnection = LocalPlayer.Backpack.ChildAdded:Connect(function(child)
-            if child:IsA("Tool") then task.wait(0.1) processTool(child) end
-        end)
-    end
+    if _G.BackpackAddedConnection then _G.BackpackAddedConnection:Disconnect() end
+    _G.BackpackAddedConnection = LocalPlayer.Backpack.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") then task.wait(0.1) processTool(child) end
+    end)
 end
 
+-- Loop Unificado e Persistente: AUTO KILL e AUTO EQUIP/PUNCH (Imune ao Reset)
 task.spawn(function()
     while true do
-        task.wait(0.5)
         local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
+        if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+            
+            -- 1. Anti-Animação de Soco (Atualizado por loop)
             for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
                 if track.Animation then
                     local animId = track.Animation.AnimationId
@@ -242,85 +243,68 @@ task.spawn(function()
                     end
                 end
             end
-        end
-    end
-end)
 
-task.spawn(function()
-    while true do
-        local character = LocalPlayer.Character
-        local rightHand = character and character:FindFirstChild("RightHand")
-        local leftHand = character and character:FindFirstChild("LeftHand")
+            -- 2. Sistema do Auto Equip e Auto Punch
+            local punchInBackpack = LocalPlayer.Backpack:FindFirstChild("Punch")
+            local punchInCharacter = char:FindFirstChild("Punch")
+            
+            if punchInBackpack then
+                punchInBackpack.Parent = char
+                if punchInBackpack:FindFirstChild("attackTime") then
+                    punchInBackpack.attackTime.Value = 0
+                end
+            end
+            
+            if punchInCharacter then
+                if punchInCharacter:FindFirstChild("attackTime") then
+                    punchInCharacter.attackTime.Value = 0
+                end
+                punchInCharacter:Activate()
+            end
+            
+            -- Outras ferramentas de ataque secundárias
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
+                pcall(function()
+                    for i = 1, 3 do 
+                        tool:Activate()
+                    end
+                end)
+            end
 
-        if rightHand and leftHand then
-            for _, target in ipairs(Players:GetPlayers()) do
-                if target ~= LocalPlayer and target.Character then
-                    local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
-                    local humanoid = target.Character:FindFirstChild("Humanoid")
-                    
-                    if targetRoot and humanoid and humanoid.Health > 0 then
-                        pcall(function()
-                            for i = 1, 5 do 
-                                firetouchinterest(rightHand, targetRoot, 1)
-                                firetouchinterest(leftHand, targetRoot, 1)
-                                firetouchinterest(rightHand, targetRoot, 0)
-                                leftHand = character:FindFirstChild("LeftHand")
-                                firetouchinterest(leftHand, targetRoot, 0)
-                            end
-                        end)
+            -- 3. Sistema de Auto Kill (Hitbox Firetouchinterest)
+            local rightHand = char:FindFirstChild("RightHand")
+            local leftHand = char:FindFirstChild("LeftHand")
+
+            if rightHand and leftHand then
+                for _, target in ipairs(Players:GetPlayers()) do
+                    if target ~= LocalPlayer and target.Character then
+                        local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+                        local targetHumanoid = target.Character:FindFirstChild("Humanoid")
+                        
+                        if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+                            pcall(function()
+                                for i = 1, 3 do 
+                                    firetouchinterest(rightHand, targetRoot, 1)
+                                    firetouchinterest(leftHand, targetRoot, 1)
+                                    firetouchinterest(rightHand, targetRoot, 0)
+                                    firetouchinterest(leftHand, targetRoot, 0)
+                                end
+                            end)
+                        end
                     end
                 end
             end
         end
-        task.wait(0.05) 
+        task.wait(0.02) -- Velocidade otimizada para estabilidade e hit registration
     end
 end)
 
+-- Tamanho mantido via loop independente e seguro
 task.spawn(function()
     while true do
-        local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
-        if punch then
-            punch.Parent = LocalPlayer.Character
-            if punch:FindFirstChild("attackTime") then
-                punch.attackTime.Value = 0
-            end
-        end
-        task.wait()
-    end
-end)
-
-task.spawn(function()
-    while true do
-        local punch = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
-        if punch then
-            punch:Activate()
-        end
-        task.wait()
-    end
-end)
-
-task.spawn(function()
-    while true do
-        local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
-        if punch then
-            punch.Parent = LocalPlayer.Character
-        end
-        task.wait(0.1)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        local char = getCharacter()
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
-            pcall(function()
-                for i = 1, 5 do 
-                    tool:Activate()
-                end
-            end)
-        end
-        task.wait(0.05)
+        applySize2()
+        task.wait(1)
     end
 end)
 
@@ -389,9 +373,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+-- Função disparada sempre que o personagem nasce
 local function initCharacter()
-    task.wait(0.5)
-    applySize2()
+    task.wait(0.2)
     teleportToKing()
     setupAnimationBlocking()
     overrideToolActivation()
@@ -399,7 +383,6 @@ end
 
 task.spawn(initCharacter)
 LocalPlayer.CharacterAdded:Connect(function()
-    _G.AnimBlockConnection = nil 
     initCharacter()
 end)
 
